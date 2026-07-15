@@ -558,6 +558,7 @@ const bookingData = {
   time: "",
   name: "",
   phone: "",
+  address: "",
   notes: ""
 };
 
@@ -635,15 +636,37 @@ function checkStep3Valid() {
 // Step 4: Details
 const nameInput = document.getElementById("booking-name");
 const phoneInput = document.getElementById("booking-phone");
+const addressInput = document.getElementById("booking-address");
 const notesInput = document.getElementById("booking-notes");
 const step4Next = document.querySelector("#step-4 .next-btn");
 
 function checkStep4Valid() {
-  if (nameInput.value.trim() !== "" && phoneInput.value.trim() !== "") {
+  if (nameInput.value.trim() !== "" && phoneInput.value.trim() !== "" && addressInput.value.trim() !== "") {
     step4Next.disabled = false;
   } else {
     step4Next.disabled = true;
   }
+}
+
+function buildBookingWhatsappMessage(serviceNames) {
+  const date = bookingData.date || document.getElementById("summary-date")?.textContent.trim() || "";
+  const time = bookingData.time || document.getElementById("summary-time")?.textContent.trim() || "";
+  const name = bookingData.name || nameInput.value.trim();
+  const phone = bookingData.phone || phoneInput.value.trim();
+  const address = bookingData.address || addressInput.value.trim();
+  const notes = bookingData.notes || notesInput.value.trim();
+
+  return [
+    "مرحباً، أود تأكيد حجزي:",
+    `الخدمة: ${serviceNames}`,
+    `المتخصصة: ${bookingData.specialist}`,
+    `التاريخ: ${date}`,
+    `الوقت: ${time}`,
+    `الاسم: ${name}`,
+    `الرقم: ${phone}`,
+    `العنوان: ${address}`,
+    notes ? `ملاحظات: ${notes}` : ""
+  ].filter(Boolean).join("\n");
 }
 
 nameInput.addEventListener("input", () => {
@@ -657,9 +680,23 @@ phoneInput.addEventListener("input", () => {
   checkStep4Valid();
 });
 
+addressInput.addEventListener("input", () => {
+  bookingData.address = addressInput.value.trim();
+  document.getElementById("summary-address").textContent = bookingData.address || "---";
+  checkStep4Valid();
+});
+
 notesInput.addEventListener("input", () => {
   bookingData.notes = notesInput.value.trim();
 });
+
+const whatsappConfirmLink = document.getElementById("whatsapp-confirm-link");
+if (whatsappConfirmLink) {
+  whatsappConfirmLink.addEventListener("click", () => {
+    const serviceNames = bookingData.services.join(" + ");
+    whatsappConfirmLink.href = `https://wa.me/${currentWhatsapp}?text=${encodeURIComponent(buildBookingWhatsappMessage(serviceNames))}`;
+  });
+}
 
 // Step 5: Submit
 document.getElementById("submit-booking-btn").addEventListener("click", async () => {
@@ -680,6 +717,7 @@ document.getElementById("submit-booking-btn").addEventListener("click", async ()
       specialistId: bookingData.specialistId,
       dateValue: bookingData.date,
       timeValue: bookingData.time,
+      address: bookingData.address,
       status: 'قيد الانتظار',
       color: '#2196f3',
       notes: bookingData.notes || ''
@@ -688,20 +726,11 @@ document.getElementById("submit-booking-btn").addEventListener("click", async ()
     currentStep = 6; // Success step
     updateWizardUI();
     
-    const message = `مرحباً، أود تأكيد حجزي:
-الخدمة: ${serviceNames}
-المتخصصة: ${bookingData.specialist}
-التاريخ: ${bookingData.date}
-الوقت: ${bookingData.time}
-الاسم: ${bookingData.name}
-الرقم: ${bookingData.phone}
-${bookingData.notes ? `ملاحظات: ${bookingData.notes}` : ''}
-`;
+    const message = buildBookingWhatsappMessage(serviceNames);
     
     const whatsappUrl = `https://wa.me/${currentWhatsapp}?text=${encodeURIComponent(message)}`;
-    const whatsappLink = document.getElementById("whatsapp-confirm-link");
-    if (whatsappLink) {
-      whatsappLink.href = whatsappUrl;
+    if (whatsappConfirmLink) {
+      whatsappConfirmLink.href = whatsappUrl;
     }
   } catch (error) {
     console.error(error);
@@ -722,6 +751,7 @@ document.getElementById("new-booking-btn").addEventListener("click", () => {
   bookingData.time = "";
   bookingData.name = "";
   bookingData.phone = "";
+  bookingData.address = "";
   bookingData.notes = "";
   
   document.querySelectorAll("#services-options .option-card").forEach(o => o.classList.remove("selected"));
@@ -731,6 +761,7 @@ document.getElementById("new-booking-btn").addEventListener("click", () => {
   
   nameInput.value = "";
   phoneInput.value = "";
+  addressInput.value = "";
   notesInput.value = "";
   
   step1Next.disabled = true;
@@ -743,6 +774,7 @@ document.getElementById("new-booking-btn").addEventListener("click", () => {
   document.getElementById("summary-date").textContent = "---";
   document.getElementById("summary-time").textContent = "---";
   document.getElementById("summary-name").textContent = "---";
+  document.getElementById("summary-address").textContent = "---";
   document.getElementById("summary-price").textContent = "---";
   
   updateWizardUI();
